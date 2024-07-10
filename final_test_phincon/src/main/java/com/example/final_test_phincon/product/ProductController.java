@@ -2,6 +2,7 @@ package com.example.final_test_phincon.product;
 
 import com.example.final_test_phincon.utils.helper.RequestForValidation;
 import com.example.final_test_phincon.utils.request.RequestCreateProduct;
+import com.example.final_test_phincon.utils.request.RequestDeduct;
 import com.example.final_test_phincon.utils.response.BaseResponse;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -58,6 +59,14 @@ public class ProductController {
     public Mono<BaseResponse<Product>> validatePeoduct(@RequestBody RequestForValidation request){
 
         Mono<BaseResponse<Product>> result = service.validationProductFromMessageOrder(request);
+
+        return result;
+    }
+
+    @PutMapping("/deduct")
+    public Mono<BaseResponse<Product>> deduct(@RequestBody RequestDeduct requestDeduct){
+
+        Mono<BaseResponse<Product>> result = service.deduct(requestDeduct);
 
         return result;
     }

@@ -1,5 +1,6 @@
 package com.example.order_final_project_java_phincon.orders;
 
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -33,6 +34,7 @@ public class Order {
     private String orderStatus;
 
     @Column("payment_method")
+    @NotNull
     private String paymentMethod;
 
     @Column("shipping_address")

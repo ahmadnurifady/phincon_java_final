@@ -116,38 +116,74 @@ public class StepFlowServices {
                                                     .orderId(message.getData().getOrder().getId())
                                                     .build();
 
-                                            return transactionWebClient.createTransaction(requestCreateTransaction)
-                                                    .flatMap(transaction -> {
+//                                            return transactionWebClient.createTransaction(requestCreateTransaction)
+//                                                    .flatMap(transaction -> {
+//
+//                                                        log.info("SUCCESS CREATE TRANSACTION");
+//                                                        log.info("DATA CREATE TRANSACTION== {}", transaction);
+//
+//                                                        return Mono.empty();
+//                                                    });
 
-                                                        log.info("SUCCESS CREATE TRANSACTION");
-                                                        log.info("DATA CREATE TRANSACTION== {}", transaction);
+                                            CreateOrderResponse updateOrderToComplete = CreateOrderResponse.builder()
+                                                    .order(Order.builder()
+                                                            .id(message.getData().getOrder().getId())
+                                                            .orderStatus("COMPLETED")
+                                                            .build())
+                                                    .orderItem(OrderItem.builder()
+                                                            .id(message.getData().getOrderItem().getId())
+                                                            .build())
+                                                    .build();
 
-                                                        return Mono.empty();
+
+                                            return orderWebClient.updateOrder(updateOrderToComplete)
+                                                    .flatMap(orderUpdateComplete -> {
+                                                        log.info("UPDATE ORDER COMPLETED");
+                                                        log.info("UPDATE ORDER COMPLETED DATA == {}", orderUpdateComplete);
+
+                                                        return transactionWebClient.createTransaction(requestCreateTransaction)
+                                                                .flatMap(transaction -> {
+
+                                                                    log.info("SUCCESS CREATE TRANSACTION");
+                                                                    log.info("DATA CREATE TRANSACTION== {}", transaction);
+
+                                                                    return Mono.empty();
+                                                                });
                                                     });
-                                        });
-
-                            })
-                            .doOnError(errorPayment -> {
-                                log.info("ROLLBACK CAUSE PAYMENT");
-
-                                CreateOrderResponse update = CreateOrderResponse.builder()
-                                        .order(Order.builder()
-                                                .id(message.getData().getOrder().getId())
-                                                .orderStatus("CANCELED")
-                                                .build())
-                                        .orderItem(OrderItem.builder()
-                                                .id(message.getData().getOrderItem().getId())
-                                                .build())
-                                        .build();
-
-                                orderWebClient.updateOrder(update)
-                                        .doOnSuccess(updateOrderCauseProductValidation -> {
-                                            log.info("ROLLBACK ORDER CAUSE PAYMENT IS SUCCESS");
                                         })
-                                        .subscribe();
-                            })
-                            .then();
+                                        .doOnError(errorPayment -> {
+                                            log.info("ROLLBACK CAUSE PAYMENT");
 
+                                            CreateOrderResponse update = CreateOrderResponse.builder()
+                                                    .order(Order.builder()
+                                                            .id(message.getData().getOrder().getId())
+                                                            .orderStatus("CANCELED")
+                                                            .build())
+                                                    .orderItem(OrderItem.builder()
+                                                            .id(message.getData().getOrderItem().getId())
+                                                            .build())
+                                                    .build();
+
+                                            orderWebClient.updateOrder(update)
+                                                    .doOnSuccess(updateOrderCauseProductValidation -> {
+                                                        log.info("ROLLBACK ORDER CAUSE PAYMENT IS SUCCESS");
+                                                    })
+                                                    .subscribe();
+
+                                            RequestDeduct requestDeduct = RequestDeduct.builder()
+                                                    .productId(message.getData().getOrderItem().getProductId())
+                                                    .quantity(message.getData().getOrderItem().getQuantity())
+                                                    .build();
+
+                                            productWebClient.deduct(requestDeduct)
+                                                    .doOnSuccess(deductProduct -> {
+                                                        log.info("DEDUCT PRODUCT SUCCESS");
+                                                    })
+                                                    .subscribe();
+                                        })
+                                        .then();
+
+                            });
 
 
 
@@ -167,17 +203,17 @@ public class StepFlowServices {
                             .build();
 
                     orderWebClient.updateOrder(createOrderResponse)
-                                    .doOnSuccess(updateOrderCauseProductValidation -> {
-                                        log.info("ROLLBACK ORDER CAUSE PRODUCT VALIDATION IS SUCCESS");
-                                    })
-                                            .subscribe();
+                            .doOnSuccess(updateOrderCauseProductValidation -> {
+                                log.info("ROLLBACK ORDER CAUSE PRODUCT VALIDATION IS SUCCESS");
+                            })
+                            .subscribe();
                     log.info("error aja == {}", error.getMessage());
                 }).then();
 
 
     }
 
-    public Mono<BaseResponse<CreateOrderResponse>> eventRollbackValidationProduct(DtoMessageKafka message){
+    public Mono<BaseResponse<CreateOrderResponse>> eventRollbackValidationProduct(DtoMessageKafka message) {
 
         CreateOrderResponse createOrderResponse = CreateOrderResponse.builder()
                 .order(Order.builder()
@@ -191,9 +227,9 @@ public class StepFlowServices {
 
         return orderWebClient.updateOrder(createOrderResponse)
                 .flatMap(updateOrder -> {
-                   log.info("SUCCESS ROLBACK ORDER");
+                    log.info("SUCCESS ROLBACK ORDER");
 
-                   log.info("DATA UPDATED ROLLBACK ORDER == {}", updateOrder);
+                    log.info("DATA UPDATED ROLLBACK ORDER == {}", updateOrder);
                     return null;
                 });
     }

@@ -5,9 +5,11 @@ import com.example.order_final_project_java_phincon.kafka.ProducerOrder;
 import com.example.order_final_project_java_phincon.orderItem.OrderItem;
 import com.example.order_final_project_java_phincon.orderItem.OrderItemRepository;
 import com.example.order_final_project_java_phincon.utils.helper.DtoMessageKafka;
+import com.example.order_final_project_java_phincon.utils.helper.ValidationService;
 import com.example.order_final_project_java_phincon.utils.request.RequestCreateOrderItem;
 import com.example.order_final_project_java_phincon.utils.response.CreateOrderResponse;
 import com.example.order_final_project_java_phincon.utils.response.KafkaResponseMessage;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,51 +35,57 @@ public class OrderService {
 
     private final ProducerOrder producerOrder;
 
+    private final ValidationService validationService;
+
     public Mono<BaseResponse<CreateOrderResponse>> save(RequestCreateOrder request) {
 
-        Order order = Order.builder()
-                .customerId(request.getCustomerId())
-                .orderDate(LocalDateTime.now())
-                .billingAddress(request.getBillingAddress())
-                .orderStatus("PENDING")
-                .paymentMethod(request.getPaymentMethod())
-                .shippingAddress(request.getShippingAddress())
-                .totalAmount(0)
-                .build();
 
-        return repository.save(order)
-                .doOnSuccess(savedOrder -> log.info("CREATE ORDER SUCCESS == {}", savedOrder))
-                .flatMap(savedOrder -> {
 
-                    OrderItem orderItem = OrderItem.builder()
-                            .price(0)
-                            .productId(request.getOrderItem().getProductId())
-                            .quantity(request.getOrderItem().getQuantity())
-                            .orderId(savedOrder.getId())
-                            .build();
+        return validationService.validate(request).flatMap(valid -> {
+            Order order = Order.builder()
+                    .customerId(request.getCustomerId())
+                    .orderDate(LocalDateTime.now())
+                    .billingAddress(request.getBillingAddress())
+                    .orderStatus("PENDING")
+                    .paymentMethod(request.getPaymentMethod())
+                    .shippingAddress(request.getShippingAddress())
+                    .totalAmount(0)
+                    .build();
+            return repository.save(order)
+                    .doOnSuccess(savedOrder -> log.info("CREATE ORDER SUCCESS == {}", savedOrder))
+                    .flatMap(savedOrder -> {
 
-                    CreateOrderResponse orderResponse = CreateOrderResponse.builder()
-                            .order(savedOrder)
-                            .orderItem(orderItem)
-                            .build();
+                        OrderItem orderItem = OrderItem.builder()
+                                .price(0)
+                                .productId(request.getOrderItem().getProductId())
+                                .quantity(request.getOrderItem().getQuantity())
+                                .orderId(savedOrder.getId())
+                                .build();
 
-                    return orderItemRepository.save(orderItem)
-                            .doOnSuccess(savedOrderItem -> {
-                                log.info("SUCCESS CREATE ORDER ITEM == {}", savedOrderItem);
+                        CreateOrderResponse orderResponse = CreateOrderResponse.builder()
+                                .order(savedOrder)
+                                .orderItem(orderItem)
+                                .build();
 
-                                DtoMessageKafka dtoMessageKafka = DtoMessageKafka.builder()
-                                        .statusSaga("CREATE-ORDER-SUCCESS")
-                                        .data(orderResponse)
-                                        .build();
+                        return orderItemRepository.save(orderItem)
+                                .doOnSuccess(savedOrderItem -> {
+                                    log.info("SUCCESS CREATE ORDER ITEM == {}", savedOrderItem);
 
-                                producerOrder.sendMessageSagaFlow(dtoMessageKafka);
-                            })
-                            .thenReturn(new BaseResponse<>(
-                                    HttpStatus.CREATED,
-                                    "Order is Created",
-                                    orderResponse
-                            ));
-                });
+                                    DtoMessageKafka dtoMessageKafka = DtoMessageKafka.builder()
+                                            .statusSaga("CREATE-ORDER-SUCCESS")
+                                            .data(orderResponse)
+                                            .build();
+
+                                    producerOrder.sendMessageSagaFlow(dtoMessageKafka);
+                                })
+                                .thenReturn(new BaseResponse<>(
+                                        HttpStatus.CREATED,
+                                        "Order is Created",
+                                        orderResponse
+                                ));
+                    });
+        });
+
     }
 
     public Mono<BaseResponse<CreateOrderResponse>> updateOrderAndOrderItem(CreateOrderResponse updateRequest) {

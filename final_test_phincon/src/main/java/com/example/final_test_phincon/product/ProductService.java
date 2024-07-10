@@ -4,10 +4,7 @@ import com.example.final_test_phincon.exeption.ProductNotFoundException;
 import com.example.final_test_phincon.kafka.ProductProducer;
 import com.example.final_test_phincon.utils.helper.CreateOrderResponse;
 import com.example.final_test_phincon.utils.helper.RequestForValidation;
-import com.example.final_test_phincon.utils.request.Order;
-import com.example.final_test_phincon.utils.request.OrderItem;
-import com.example.final_test_phincon.utils.request.RequestCreateOrder;
-import com.example.final_test_phincon.utils.request.RequestCreateProduct;
+import com.example.final_test_phincon.utils.request.*;
 import com.example.final_test_phincon.utils.response.BaseResponse;
 import com.example.final_test_phincon.utils.response.DtoMessageKafka;
 import lombok.RequiredArgsConstructor;
@@ -78,6 +75,31 @@ public class ProductService {
                     ));
                 });
 
+    }
+
+    public Mono<BaseResponse<Product>> deduct(RequestDeduct requestDeduct){
+        return repository.findById(requestDeduct.getProductId())
+                .switchIfEmpty(Mono.error(new ProductNotFoundException(String.format("Product not found. ID: %s", requestDeduct.getProductId()))))
+                .flatMap(product -> {
+
+                    Product product1 = Product.builder()
+                            .stockQuantity(requestDeduct.getQuantity())
+                            .build();
+
+                    return repository.save(product1)
+                            .doOnSuccess(success -> {
+                                log.info("SUCCESS DEDUCT PRODUCT");
+                                log.info("porudtc data == {}", success);
+
+
+                            })
+                            .then(Mono.just(new BaseResponse<>(
+                                HttpStatus.OK,
+                                "deduct product success",
+                                product1
+                            )));
+
+                });
     }
 
     public Mono<BaseResponse<?>> deleteProduct(int id) {

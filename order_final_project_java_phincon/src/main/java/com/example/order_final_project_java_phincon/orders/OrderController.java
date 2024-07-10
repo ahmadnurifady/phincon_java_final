@@ -1,6 +1,7 @@
 package com.example.order_final_project_java_phincon.orders;
 
 import com.example.order_final_project_java_phincon.utils.response.CreateOrderResponse;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -18,9 +19,8 @@ public class OrderController {
 
     @PostMapping("/create")
     public Mono<BaseResponse<CreateOrderResponse>> createOrder(@RequestBody RequestCreateOrder request) {
-        Mono<BaseResponse<CreateOrderResponse>> result = service.save(request);
+        return service.save(request);
 
-        return result;
     }
 
     @GetMapping("/all")
