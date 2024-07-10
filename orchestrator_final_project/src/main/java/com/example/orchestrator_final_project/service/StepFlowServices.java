@@ -170,9 +170,9 @@ public class StepFlowServices {
                                                     })
                                                     .subscribe();
 
-                                            RequestDeduct requestDeduct = RequestDeduct.builder()
-                                                    .productId(message.getData().getOrderItem().getProductId())
-                                                    .quantity(message.getData().getOrderItem().getQuantity())
+                                            Product requestDeduct = Product.builder()
+                                                    .id(message.getData().getOrderItem().getProductId())
+                                                    .stockQuantity(message.getData().getOrderItem().getQuantity())
                                                     .build();
 
                                             productWebClient.deduct(requestDeduct)

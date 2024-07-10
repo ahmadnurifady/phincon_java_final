@@ -1,6 +1,7 @@
 package com.example.payment_final_project_java_phincon.balance;
 
 import com.example.payment_final_project_java_phincon.exeption.DataNotFoundException;
+import com.example.payment_final_project_java_phincon.utils.helper.ValidationService;
 import com.example.payment_final_project_java_phincon.utils.request.RequestCreateBalance;
 import com.example.payment_final_project_java_phincon.utils.request.RequestValidateCustomerBalance;
 import com.example.payment_final_project_java_phincon.utils.response.BaseResponse;
@@ -18,20 +19,26 @@ public class BalanceService {
 
     private final BalanceRepository repository;
 
+    private final ValidationService validationService;
+
     public Mono<BaseResponse<Balance>> save(RequestCreateBalance request) {
 
-        Balance balance = Balance.builder()
-                .customerId(request.getCustomerId())
-                .amount(request.getAmount())
-                .build();
+        return validationService.validate(request).flatMap(valid -> {
+            Balance balance = Balance.builder()
+                    .customerId(request.getCustomerId())
+                    .amount(request.getAmount())
+                    .build();
 
-        return repository.save(balance)
-                .doOnSuccess(balanceCreate -> log.info("CREATE BALANCE SUCCESS == {}", balanceCreate))
-                .then(Mono.just(new BaseResponse<>(
-                    HttpStatus.CREATED,
-                    "Create Balance Success",
-                    balance
-                )));
+            return repository.save(balance)
+                    .doOnSuccess(balanceCreate -> log.info("CREATE BALANCE SUCCESS == {}", balanceCreate))
+                    .then(Mono.just(new BaseResponse<>(
+                            HttpStatus.CREATED,
+                            "Create Balance Success",
+                            balance
+                    )));
+        });
+
+
     }
 
     public Flux<BaseResponse<Balance>> getAllBalances() {

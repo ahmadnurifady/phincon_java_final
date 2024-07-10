@@ -32,10 +32,10 @@ public class ProductWebClient {
                 .doOnError(throwable -> log.error("Product reservation failed :: {}", throwable.getMessage()));
     }
 
-    public Mono<BaseResponse<Product>> deduct(RequestDeduct requestDeduct){
+    public Mono<BaseResponse<Product>> deduct(Product requestDeduct){
         return webClient.put()
                 .uri("/deduct")
-                .body(Mono.just(requestDeduct), RequestDeduct.class)
+                .body(Mono.just(requestDeduct), Product.class)
                 .retrieve()
                 .bodyToMono(new ParameterizedTypeReference<BaseResponse<Product>>() {})
                 .doOnNext(validateResponse -> log.info("PRODUCT VALIDATION == {}", validateResponse))

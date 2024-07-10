@@ -4,6 +4,7 @@ import com.example.final_test_phincon.exeption.ProductNotFoundException;
 import com.example.final_test_phincon.kafka.ProductProducer;
 import com.example.final_test_phincon.utils.helper.CreateOrderResponse;
 import com.example.final_test_phincon.utils.helper.RequestForValidation;
+import com.example.final_test_phincon.utils.helper.ValidationService;
 import com.example.final_test_phincon.utils.request.*;
 import com.example.final_test_phincon.utils.response.BaseResponse;
 import com.example.final_test_phincon.utils.response.DtoMessageKafka;
@@ -27,29 +28,32 @@ import java.util.Date;
 @RequiredArgsConstructor
 public class ProductService {
 
-    private final ProductProducer producer;
 
     private final ProductRepository repository;
 
+    private final ValidationService validationService;
+
     public Mono<BaseResponse<Product>> save(RequestCreateProduct request) {
 
-        Product product = Product.builder()
-                .name(request.getName())
-                .price(request.getPrice())
-                .category(request.getCategory())
-                .description(request.getDescription())
-                .stockQuantity(request.getStockQuantity())
-                .imageUrl(request.getImageUrl())
-                .createdAt(Instant.now())
-                .updatedAt(Instant.now())
-                .build();
+       return validationService.validate(request).flatMap(valid -> {
+           Product product = Product.builder()
+                   .name(request.getName())
+                   .price(request.getPrice())
+                   .category(request.getCategory())
+                   .description(request.getDescription())
+                   .stockQuantity(request.getStockQuantity())
+                   .imageUrl(request.getImageUrl())
+                   .createdAt(Instant.now())
+                   .updatedAt(Instant.now())
+                   .build();
 
-        return repository.save(product)
-                .then(Mono.just(new BaseResponse<>(
-                        HttpStatus.CREATED,
-                        "Product is Created",
-                        product
-                )));
+           return repository.save(product)
+                   .then(Mono.just(new BaseResponse<>(
+                           HttpStatus.CREATED,
+                           "Product is Created",
+                           product
+                   )));
+       });
     }
 
     public Flux<BaseResponse<Product>> getAllProducts() {
@@ -77,30 +81,40 @@ public class ProductService {
 
     }
 
-    public Mono<BaseResponse<Product>> deduct(RequestDeduct requestDeduct){
-        return repository.findById(requestDeduct.getProductId())
-                .switchIfEmpty(Mono.error(new ProductNotFoundException(String.format("Product not found. ID: %s", requestDeduct.getProductId()))))
-                .flatMap(product -> {
+    public Mono<BaseResponse<Product>> updateProduct(Product updateRequest) {
+        return repository.findById(updateRequest.getId())
+                .flatMap(existingProduct -> {
+                    // Update fields only if they are not null
+                    if (updateRequest.getName() != null) {
+                        existingProduct.setName(updateRequest.getName());
+                    }
+                    if (updateRequest.getPrice() != 0.0f) {
+                        existingProduct.setPrice(updateRequest.getPrice());
+                    }
+                    if (updateRequest.getCategory() != null) {
+                        existingProduct.setCategory(updateRequest.getCategory());
+                    }
+                    if (updateRequest.getDescription() != null) {
+                        existingProduct.setDescription(updateRequest.getDescription());
+                    }
+                    if (updateRequest.getImageUrl() != null) {
+                        existingProduct.setImageUrl(updateRequest.getImageUrl());
+                    }
+                    if (updateRequest.getStockQuantity() != 0) {
+                        existingProduct.setStockQuantity(updateRequest.getStockQuantity() + existingProduct.getStockQuantity());
+                    }
+                    existingProduct.setUpdatedAt(Instant.now());
 
-                    Product product1 = Product.builder()
-                            .stockQuantity(requestDeduct.getQuantity())
-                            .build();
-
-                    return repository.save(product1)
-                            .doOnSuccess(success -> {
-                                log.info("SUCCESS DEDUCT PRODUCT");
-                                log.info("porudtc data == {}", success);
-
-
-                            })
-                            .then(Mono.just(new BaseResponse<>(
-                                HttpStatus.OK,
-                                "deduct product success",
-                                product1
-                            )));
-
-                });
+                    return repository.save(existingProduct);
+                })
+                .map(updatedProduct -> new BaseResponse<>(
+                        HttpStatus.OK,
+                        "Product updated successfully",
+                        updatedProduct
+                ))
+                .switchIfEmpty(Mono.error(new ProductNotFoundException(String.format("Product not found. ID: %d", updateRequest.getId()))));
     }
+
 
     public Mono<BaseResponse<?>> deleteProduct(int id) {
 

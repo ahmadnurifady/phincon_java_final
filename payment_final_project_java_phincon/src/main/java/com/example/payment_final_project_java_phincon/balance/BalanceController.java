@@ -38,12 +38,6 @@ public class BalanceController {
         return result;
     }
 
-//    @PutMapping("/update/{id}")
-//    public Mono<ResponseEntity<Product>> updateProduct(@PathVariable int id, @RequestBody Product product) {
-//        return service.updateProduct(id, product)
-//                .map(updatedProduct -> new ResponseEntity<>(updatedProduct, HttpStatus.OK))
-//                .defaultIfEmpty(new ResponseEntity<>(HttpStatus.NOT_FOUND));
-//    }
 
     @DeleteMapping("/delete/{id}")
     public Mono<BaseResponse<?>> deleteBalance(@PathVariable int id) {

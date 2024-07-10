@@ -1,5 +1,6 @@
 package com.example.final_test_phincon.utils.request;
 
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -13,30 +14,29 @@ import org.springframework.validation.annotation.Validated;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@Validated
 public class RequestCreateProduct {
 
-    @NotBlank
-    @Size(min = 15, max = 255)
+    @NotNull
+    @Size(min = 3, max = 255)
     private String name;
 
     @NotNull
-    @Size(min = 1)
+    @Min(1)
     private long price;
 
-    @NotBlank
-    @Size(min = 15, max = 255)
+    @NotNull
+    @Size(min = 10, max = 255)
     private String category;
 
-    @NotBlank
+    @NotNull
     @Size(min = 15, max = 255)
     private String description;
 
-    @NotBlank
-    @Size(min = 15, max = 255)
+    @NotNull
+    @Size(min = 10, max = 255)
     private String imageUrl;
 
     @NotNull
-    @Size(min = 1)
+    @Min(1)
     private int stockQuantity;
 }

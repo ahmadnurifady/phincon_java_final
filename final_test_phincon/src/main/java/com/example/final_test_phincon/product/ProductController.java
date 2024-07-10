@@ -18,7 +18,7 @@ public class ProductController {
     private ProductService service;
 
     @PostMapping("/create")
-    public Mono<BaseResponse<Product>> createProduct(@Valid @RequestBody RequestCreateProduct request) {
+    public Mono<BaseResponse<Product>> createProduct(@RequestBody RequestCreateProduct request) {
         Mono<BaseResponse<Product>> result = service.save(request);
 
 
@@ -64,9 +64,9 @@ public class ProductController {
     }
 
     @PutMapping("/deduct")
-    public Mono<BaseResponse<Product>> deduct(@RequestBody RequestDeduct requestDeduct){
+    public Mono<BaseResponse<Product>> deduct(@RequestBody Product requestDeduct){
 
-        Mono<BaseResponse<Product>> result = service.deduct(requestDeduct);
+        Mono<BaseResponse<Product>> result = service.updateProduct(requestDeduct);
 
         return result;
     }
